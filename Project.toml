@@ -1,0 +1,13 @@
+name = "DrWatsonSim"
+uuid = "2380ba89-4eda-4b1c-913c-f10e6d4aa00f"
+authors = ["Sebastian Pech <sebastian.pech@me.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
