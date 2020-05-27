@@ -1,7 +1,3 @@
-# using Revise
-using Pkg
-# pkg"activate ."
-
 using DrWatsonSim
 const ds = DrWatsonSim
 using Test
@@ -138,4 +134,3 @@ include("helper_functions.jl")
         end
     end
 end
-
