@@ -1,3 +1,4 @@
+using Pkg
 using DrWatsonSim
 const ds = DrWatsonSim
 using Test

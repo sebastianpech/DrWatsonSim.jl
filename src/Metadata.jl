@@ -3,7 +3,7 @@ export Metadata, Metadata!, rename!, delete!
 const metadata_folder_name = ".metadata"
 const metadata_lock = "metadata.lck"
 const metadata_index = "index.bson"
-const metadata_max_unlock_retries = 10
+const metadata_max_unlock_retries = 100
 const metadata_sleep = 0.1
 
 metadatadir(args...) = projectdir(metadata_folder_name, args...)

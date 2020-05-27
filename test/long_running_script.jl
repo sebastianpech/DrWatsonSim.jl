@@ -2,6 +2,7 @@ using DrWatson
 @quickactivate "dummy_project"
 using DrWatsonSim
 using BSON
+using Dates
 
 function long_running_computation(p,output_path)
     sleep(p[:duration])
@@ -17,4 +18,10 @@ parameter = @dict duration a b
 
 dict_list(parameter)
                                                      
+if in_simulation_mode()
+    m = Metadata(simdir())
+    m["type"] = "Simple Computation"
+    m["started at"] = Dates.now()
+end
+
 @run x->long_running_computation(x, simdir("output.bson")) dict_list(parameter) datadir("sims")

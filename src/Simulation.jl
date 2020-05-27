@@ -1,10 +1,11 @@
-export simdir, @run
+export simdir, @run, in_simulation_mode
 
 const ENV_FOLDER = "SIMULATION_FOLDER"
 const ENV_METADATA = "SIMULATION_METADATA_ID"
 
 from_folder_name(n::String) = parse(Int, n) 
 to_folder_name(n) = string(n)
+in_simulation_mode() = ENV_METADATA in keys(ENV)
 
 function simdir(args...)
     if ENV_FOLDER in keys(ENV)
@@ -17,7 +18,7 @@ run_simulation(f,p,args...) = run_simulation(f, [p], args...)
 
 function run_simulation(f,param,directory,source)
     @sync for p in param
-        if ENV_METADATA in keys(ENV)
+        if in_simulation_mode()
             m = Metadata(parse(Int,ENV[ENV_METADATA]))
             f(m["parameters"])
             return
