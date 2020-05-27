@@ -1,5 +1,8 @@
 module DrWatsonSim
 
-# Write your package code here.
+using DrWatson
+using BSON
 
+include("Metadata.jl")
+include("Simulation.jl")
 end
