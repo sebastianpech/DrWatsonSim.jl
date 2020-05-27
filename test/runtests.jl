@@ -4,6 +4,7 @@ const ds = DrWatsonSim
 using Test
 using BSON
 using DrWatson
+using Dates
 
 include("helper_functions.jl")
 
@@ -112,24 +113,25 @@ include("helper_functions.jl")
                 end
             end
         end
-        @testset "Simulations" begin
-            dummy_project() do folder
-                @testset "long running computation" begin
-                    Pkg.develop(PackageSpec(url=joinpath(@__DIR__,"..")))
-                    pkg"add BSON"
-                    file = scriptsdir("long_running_script.jl")
-                    cp(joinpath(@__DIR__, "long_running_script.jl"), file)
-                    run(`julia $file`)
-                    for i in 1:6
-                        folder = datadir("sims","$i")
-                        file = datadir("sims","$i","output.bson")
-                        @test isfile(file)
-                        result = BSON.load(file)[:result]
-                        m = Metadata(folder)
-                        p = m["parameters"]
-                        @test p[:a]^p[:b] == result
-                        @test m.path == Metadata(i).path
-                    end
+
+    end
+    @testset "Simulations" begin
+        dummy_project() do folder
+            @testset "long running computation" begin
+                Pkg.develop(PackageSpec(url=joinpath(@__DIR__,"..")))
+                pkg"add BSON"
+                file = scriptsdir("long_running_script.jl")
+                cp(joinpath(@__DIR__, "long_running_script.jl"), file)
+                run(`julia $file`)
+                for i in 1:6
+                    folder = datadir("sims","$i")
+                    file = datadir("sims","$i","output.bson")
+                    @test isfile(file)
+                    result = BSON.load(file)[:result]
+                    m = Metadata(folder)
+                    p = m["parameters"]
+                    @test p[:a]^p[:b] == result
+                    @test m.path == Metadata(i).path
                 end
             end
         end
