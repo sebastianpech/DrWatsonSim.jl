@@ -10,12 +10,15 @@ metadatadir(args...) = projectdir(metadata_folder_name, args...)
 metadatalock() = metadatadir(metadata_lock)
 metadataindex() = metadatadir(metadata_index)
 
-mutable struct Metadata
+mutable struct Metadata <: AbstractDict{String, Any}
     id::Int
     path::String
     mtime::Float64
     data::Dict{String,Any}
 end
+
+Base.length(m::Metadata) = length(m.data)
+Base.iterate(m::Metadata, args...; kwargs...) = iterate(m.data, args...; kwargs...)
 
 Metadata!(path::String) = Metadata(path, overwrite=true)
 
@@ -27,7 +30,9 @@ function Metadata(path::String; overwrite=false)
     _id = find_file_in_index(rel_path)
     if _id != nothing && !overwrite
         m = Metadata(_id)
-        m.mtime != mtime(path) && @warn "The metadata entries might not be up to date. The file changed after adding the entries"
+        if m.mtime != mtime(path) && isfile(path)
+            @warn "The metadata entries might not be up to date. The file changed after adding the entries"
+        end
     elseif _id != nothing && overwrite
         m = Metadata(_id, rel_path, mtime(path), Dict{String,Any}())
         save_metadata(m)
@@ -198,3 +203,13 @@ function unlock_identifier(id)
         rm(metadatadir(to_lck_file_name(id)))
     end
 end
+
+function Base.show(io::IO, m::Metadata)
+    print(io, "Metadata with $(length(m.data)) entries:")
+    for p in m.data
+        println(io)
+        print(io, "  \"$(p[1])\" =>")
+    end
+end
+
+DrWatson.tag!(m::Metadata, args...; kwargs...) = tag!(m.data, args...; kwargs...)
