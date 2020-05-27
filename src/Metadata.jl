@@ -18,7 +18,7 @@ mutable struct Metadata <: AbstractDict{String, Any}
 end
 
 Base.length(m::Metadata) = length(m.data)
-Base.iterate(m::Metadata, args...; kwargs...) = iterate(m.data, args...; kwargs...)
+Base.iterate(m::Metadata, args...; kwargs...) = interate(m.data, args...; kwargs...)
 
 Metadata!(path::String) = Metadata(path, overwrite=true)
 
@@ -212,4 +212,7 @@ function Base.show(io::IO, m::Metadata)
     end
 end
 
-DrWatson.tag!(m::Metadata, args...; kwargs...) = tag!(m.data, args...; kwargs...)
+function DrWatson.tag!(m::Metadata, args...; kwargs...) 
+    tag!(m.data, args...; kwargs...)
+    return m
+end
