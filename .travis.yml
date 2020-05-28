@@ -1,14 +1,13 @@
 language: julia
-
 os:
-  - linux
-  - windows
-  - osx
+    - linux
+    - windows
+    - osx
 
 julia:
-  - 1
-  - nightly
+    - 1
+    - nightly
 
- before_script:
-  - git config --global user.name "GitUser"
-  - git config --global user.email "git@us.er"
+before_script:
+    - git config --global user.name "GitUser"
+    - git config --global user.email "git@us.er"
