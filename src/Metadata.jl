@@ -107,14 +107,14 @@ end
 Base.getindex(m::Metadata, field::String) = m.data[field]
 function Base.setindex!(m::Metadata, val, field::String)
     m.data[field] = val
-    @async save_metadata(m)
+    save_metadata(m)
     return val
 end
 
 Base.keys(m::Metadata) = keys(m.data)
 function Base.delete!(m::Metadata, field)
     delete!(m.data,field)
-    @async save_metadata(m)
+    save_metadata(m)
     return m
 end
 
@@ -261,14 +261,6 @@ end
 function free_identifier(id)
     if isfile(metadatadir(to_reserved_identifier_name(id)))
         rm(metadatadir(to_reserved_identifier_name(id)))
-    end
-end
-
-function Base.show(io::IO, m::Metadata)
-    print(io, "Metadata with $(length(m.data)) entries:")
-    for p in m.data
-        println(io)
-        print(io, "  \"$(p[1])\" =>")
     end
 end
 
