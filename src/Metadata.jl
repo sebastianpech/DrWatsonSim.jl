@@ -3,7 +3,7 @@ export Metadata, Metadata!, rename!, delete!
 const metadata_folder_name = ".metadata"
 const metadata_lock = "metadata.lck"
 const metadata_index = "index.bson"
-const metadata_max_unlock_retries = 100
+const metadata_max_unlock_retries = 1000
 const metadata_sleep = 0.1
 
 metadatadir(args...) = projectdir(metadata_folder_name, args...)
@@ -18,7 +18,7 @@ mutable struct Metadata <: AbstractDict{String, Any}
 end
 
 Base.length(m::Metadata) = length(m.data)
-Base.iterate(m::Metadata, args...; kwargs...) = interate(m.data, args...; kwargs...)
+Base.iterate(m::Metadata, args...; kwargs...) = iterate(m.data, args...; kwargs...)
 
 Metadata!(path::String) = Metadata(path, overwrite=true)
 
@@ -65,6 +65,13 @@ function Metadata(id::Int, path::String)
     return m
 end
 
+function Metadata(id::Int)
+    path = metadatadir(to_file_name(id))
+    isfile(path) || error("No metadata entry for id '$id'")
+    entry = BSON.load(metadatadir(to_file_name(id)))
+    Metadata([entry[string(field)] for field in fieldnames(Metadata)]...)
+end
+
 function reserve_next_identifier()
     assert_metadata_directory()
     lock_metadata_directory()
@@ -94,13 +101,6 @@ function find_file_in_index(path)
             return id
         end
     end
-end
-
-function Metadata(id::Int)
-    path = metadatadir(to_file_name(id))
-    isfile(path) || error("No metadata entry for id '$id'")
-    entry = BSON.load(metadatadir(to_file_name(id)))
-    Metadata([entry[string(field)] for field in fieldnames(Metadata)]...)
 end
 
 Base.getindex(m::Metadata, field::String) = m.data[field]

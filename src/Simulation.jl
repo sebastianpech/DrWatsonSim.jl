@@ -1,4 +1,4 @@
-export simdir, @run, in_simulation_mode
+export simdir, simid, @run, in_simulation_mode
 
 const ENV_FOLDER = "SIMULATION_FOLDER"
 const ENV_METADATA = "SIMULATION_METADATA_ID"
@@ -14,12 +14,19 @@ function simdir(args...)
     error("Not in simulation environment")
 end
 
+function simid()
+    if ENV_METADATA in keys(ENV)
+        return parse(Int,ENV[ENV_METADATA])
+    end
+    error("Not in simulation environment")
+end
+
 run_simulation(f,p,args...) = run_simulation(f, [p], args...)
 
 function run_simulation(f,param,directory,source)
     @sync for p in param
         if in_simulation_mode()
-            m = Metadata(parse(Int,ENV[ENV_METADATA]))
+            m = Metadata(simid())
             f(m["parameters"])
             return
         end

@@ -16,9 +16,10 @@ a = [1,2]
 b = 3
 parameter = @dict duration a b
 
-dict_list(parameter)
-                                                     
 if in_simulation_mode()
+    # Using simid() here is actually better, because then the 
+    # no lookup it the index file is need which means, that the 
+    # database must not be loked.
     m = Metadata(simdir())
     m["type"] = "Simple Computation"
     m["started at"] = Dates.now()
