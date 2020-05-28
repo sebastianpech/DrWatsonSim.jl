@@ -49,7 +49,7 @@ end
 
 function Metadata(id::Int, path::String)
     assert_metadata_directory()
-    lck_path = metadatadir(to_lck_file_name(id))
+    lck_path = metadatadir(to_reserved_identifier_name(id))
     rel_path = relpath(path, projectdir())
     lock("metadata", wait_for_semaphore="indexread")
     if !isfile(lck_path) 
@@ -147,13 +147,13 @@ end
 
 function save_metadata(m::Metadata)
     BSON.bson(metadatadir(to_file_name(m.id)),Dict(string(field)=>getfield(m,field) for field in fieldnames(Metadata)))
-    unlock_identifier(m.id)
+    free_identifier(m.id)
 end
 
 get_first_identifier() = 1
 from_file_name(x) = parse(Int,splitext(x)[1])
 to_file_name(x) = string(x)*".bson"
-to_lck_file_name(x) = string(x)*".lck"
+to_reserved_identifier_name(x) = string(x)*".reserved"
 
 function assert_metadata_directory()
     metadata_directory = metadatadir()
@@ -165,13 +165,13 @@ function assert_metadata_directory()
 end
 
 function get_next_identifier()
-    files = filter(x-> x != metadata_index && !isdir(metadatadir(x)) && !(splitext(x)[2] == "sem"),readdir(metadatadir()))
+    files = filter(x-> x != metadata_index && !(splitext(x)[2] in (".sem", ".lck")),readdir(metadatadir()))
     if length(files) == 0 
         next_id = get_first_identifier()
     else
         next_id = last(sort(from_file_name.(files)))+1
     end
-    lock_identifier(next_id)
+    reserve_identifier(next_id)
     return next_id
 end
 
@@ -247,15 +247,15 @@ function semaphore_exit(name)
     unlock(name)
 end
 
-function lock_identifier(id)
+function reserve_identifier(id)
     isfile(metadatadir(to_file_name(id))) && error("$id cannot be reserverd, it is already in use")
-    isfile(metadatadir(to_lck_file_name(id))) && error("$id cannot be reserverd, it is already in locked by another process")
-    touch(metadatadir(to_lck_file_name(id)))
+    isfile(metadatadir(to_reserved_identifier_name(id))) && error("$id cannot be reserverd, it is already in locked by another process")
+    touch(metadatadir(to_reserved_identifier_name(id)))
 end
 
-function unlock_identifier(id)
-    if isfile(metadatadir(to_lck_file_name(id)))
-        rm(metadatadir(to_lck_file_name(id)))
+function free_identifier(id)
+    if isfile(metadatadir(to_reserved_identifier_name(id)))
+        rm(metadatadir(to_reserved_identifier_name(id)))
     end
 end
 
