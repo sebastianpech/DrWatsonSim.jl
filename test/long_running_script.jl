@@ -11,8 +11,8 @@ function long_running_computation(p,output_path)
     return nothing
 end
 
-duration = [2, 0.1, 1]
-a = [1,2,3]
+duration = [0.1, 1]
+a = [1,3]
 b = 1
 parameter = @dict duration a b
 
