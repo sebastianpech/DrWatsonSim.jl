@@ -1,4 +1,5 @@
 using Pkg
+pkg"activate ."
 using DrWatsonSim
 const ds = DrWatsonSim
 using Test
@@ -163,7 +164,7 @@ include("helper_functions.jl")
                 file = scriptsdir("long_running_script.jl")
                 cp(joinpath(@__DIR__, "long_running_script.jl"), file)
                 run(`julia $file`)
-                for i in 1:9
+                for i in 1:5
                     folder = datadir("sims","$i")
                     file = datadir("sims","$i","output.bson")
                     @test isfile(file)
