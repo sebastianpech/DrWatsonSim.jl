@@ -154,7 +154,7 @@ include("helper_functions.jl")
         end
     end
     @testset "Simulations" begin
-        @eval ds max_lock_retries = 1000
+        @eval ds max_lock_retries = 10000
         dummy_project() do folder
             @testset "long running computation" begin
                 Pkg.develop(PackageSpec(url=joinpath(@__DIR__,"..")))
