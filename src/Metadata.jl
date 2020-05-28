@@ -158,8 +158,14 @@ function assert_metadata_directory()
     metadata_directory = metadatadir()
     if !isdir(metadata_directory)
         @info "Metadata directory not found, creating a new one"
-        mkdir(metadata_directory)
-        BSON.bson(metadataindex(),Dict{Int,String}())
+        try
+            mkdir(metadata_directory)
+            BSON.bson(metadataindex(),Dict{Int,String}())
+        catch e
+            if e.code != -17
+                rethrow(e)
+            end
+        end
     end
 end
 
