@@ -165,7 +165,7 @@ function assert_metadata_directory()
 end
 
 function get_next_identifier()
-    files = filter(x->!(x in (metadata_lock, metadata_index)),readdir(metadatadir()))
+    files = filter(x-> x != metadata_index && !isdir(metadatadir(x)) && !(splitext(x)[2] == "sem"),readdir(metadatadir()))
     if length(files) == 0 
         next_id = get_first_identifier()
     else
