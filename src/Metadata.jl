@@ -1,13 +1,11 @@
 export Metadata, Metadata!, rename!, delete!
 
 const metadata_folder_name = ".metadata"
-const metadata_lock = "metadata.lck"
 const metadata_index = "index.bson"
-const metadata_max_unlock_retries = 1000
-const metadata_sleep = 0.1
+const metadata_lock = "metadata.lck"
+const max_lock_retries = 1000
 
 metadatadir(args...) = projectdir(metadata_folder_name, args...)
-metadatalock() = metadatadir(metadata_lock)
 metadataindex() = metadatadir(metadata_index)
 
 mutable struct Metadata <: AbstractDict{String, Any}
@@ -24,10 +22,13 @@ Metadata!(path::String) = Metadata(path, overwrite=true)
 
 function Metadata(path::String; overwrite=false)
     assert_metadata_directory()
-    lock_metadata_directory()
     rel_path = relpath(path, projectdir())
     # Check if there is already an entry for that file in the index
+    lock("metadata")
+    semaphore_enter("indexread")
+    unlock("metadata")
     _id = find_file_in_index(rel_path)
+    semaphore_exit("indexread")
     if _id != nothing && !overwrite
         m = Metadata(_id)
         if m.mtime != mtime(path) && isfile(path)
@@ -37,11 +38,12 @@ function Metadata(path::String; overwrite=false)
         m = Metadata(_id, rel_path, mtime(path), Dict{String,Any}())
         save_metadata(m)
     else
+        lock("metadata", wait_for_semaphore="indexread")
         m = Metadata(get_next_identifier(), rel_path, mtime(path), Dict{String,Any}())
         add_index_entry(m.id, m.path)
         save_metadata(m)
+        unlock("metadata")
     end
-    unlock_metadata_directory()
     return m
 end
 
@@ -49,19 +51,19 @@ function Metadata(id::Int, path::String)
     assert_metadata_directory()
     lck_path = metadatadir(to_lck_file_name(id))
     rel_path = relpath(path, projectdir())
-    lock_metadata_directory()
+    lock("metadata", wait_for_semaphore="indexread")
     if !isfile(lck_path) 
-        unlock_metadata_directory()
+        unlock("metadata")
         error("No locked metadata file with id '$id'")
     end
     if find_file_in_index(rel_path) != nothing 
-        unlock_metadata_directory()
+        unlock("metadata")
         error("There is already metadata stored for '$path'.")
     end
     m = Metadata(id, rel_path, mtime(rel_path), Dict{String, Any}())
     add_index_entry(m.id, m.path)
     save_metadata(m)
-    unlock_metadata_directory()
+    unlock("metadata")
     return m
 end
 
@@ -74,9 +76,9 @@ end
 
 function reserve_next_identifier()
     assert_metadata_directory()
-    lock_metadata_directory()
+    lock("metadata")
     id = get_next_identifier()
-    unlock_metadata_directory()
+    unlock("metadata")
     return id
 end
 
@@ -120,27 +122,27 @@ end
 function rename!(m::Metadata, path)
     rel_path = relpath(path, projectdir())
     assert_metadata_directory()
-    lock_metadata_directory()
+    lock("metadata", wait_for_semaphore="indexread")
     if find_file_in_index(rel_path) != nothing 
-        unlock_metadata_directory()
+        unlock("metadata")
         error("There is already metadata stored for '$path'.")
     end
     add_index_entry(m.id, rel_path)
-    unlock_metadata_directory()
+    unlock("metadata")
     m.path = rel_path
 end
 
 function Base.delete!(m::Metadata)
     assert_metadata_directory()
-    lock_metadata_directory()
+    lock("metadata", wait_for_semaphore="indexread")
     file = metadatadir(to_file_name(m.id))
     if !isfile(file)
-        unlock_metadata_directory()
+        unlock("metadata")
         error("There is no metadata storage for id $(m.path)")
     end
     rm(file)
     remove_index_entry(m.id, m.path)
-    unlock_metadata_directory()
+    unlock("metadata")
 end
 
 function save_metadata(m::Metadata)
@@ -173,23 +175,76 @@ function get_next_identifier()
     return next_id
 end
 
-function lock_metadata_directory()
-    for _ in 1:metadata_max_unlock_retries
-        if !isfile(metadatalock())
-            touch(metadatalock())
-            return
+function lock(name; wait_for_semaphore="")
+    lock_path =  metadatadir("$name.lck")
+    for _ in 1:max_lock_retries
+        if wait_for_semaphore == "" || semaphore_status(wait_for_semaphore) == 0
+            try
+                mkdir(lock_path)
+                return
+            catch e
+                sleep(0.1)
+            end
         end
-        sleep(metadata_sleep)
     end
-    error("Could not retriev lock for metadata folder. Another process has locked the folder.")
+    error("Could not retriev lock $name")
+end  
+
+function unlock(name)
+    lock_path =  metadatadir("$name.lck")
+    try
+        mkdir(lock_path)
+    catch e
+        rm(lock_path)
+        return
+    end
+    rm(lock_path)
+    error("$name is currently unlocked.")
 end
 
-function unlock_metadata_directory()
-    if isfile(metadatalock())
-        rm(metadatalock())
+function semaphore_status(name)
+    sem_path =  metadatadir("$name.sem")
+    lock(name)
+    if isfile(sem_path)
+        n = parse(Int,read(sem_path,String))
     else
-        error("The metadata folder is currently unlocked")
-   end
+        n = 0
+    end
+    unlock(name)
+    return n
+end
+
+function semaphore_enter(name)
+    sem_path =  metadatadir("$name.sem")
+    lock(name)
+    if isfile(sem_path)
+        n = parse(Int,read(sem_path,String))
+    else
+        n = 0
+    end
+    open(sem_path,"w") do f
+        write(f, string(n+1))
+    end
+    unlock(name)
+end
+
+function semaphore_exit(name)
+    sem_path =  metadatadir("$name.sem")
+    lock(name)
+    if isfile(sem_path)
+        n = parse(Int,read(sem_path,String))
+        if n == 1
+            rm(sem_path)
+        else
+            open(sem_path,"w") do f
+                write(f, string(n-1))
+            end
+        end
+    else
+        unlock(name)
+        error("Semaphore $name is out of balance. Expected a file but there is none")
+    end
+    unlock(name)
 end
 
 function lock_identifier(id)
