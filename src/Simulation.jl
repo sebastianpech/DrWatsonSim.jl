@@ -36,11 +36,14 @@ function run_simulation(f,param,directory,source)
         m = Metadata(id, joinpath(directory,foldername))
         tag!(m.data, source=source)
         save_metadata(m)
-        m["parameters"] = p
+        julia = Base.julia_cmd()
         env = copy(ENV)
+        m["parameters"] = p
+        m["mtime_scriptfile"] = mtime(PROGRAM_FILE)
+        m["julia_command"] = julia
+        m["ENV"] = env
         env[ENV_FOLDER] = joinpath(directory,foldername)
         env[ENV_METADATA] = string(m.id)
-        julia = Base.julia_cmd()
         @async run(detach(setenv(`$julia $(PROGRAM_FILE)`, env)))
     end
 end
