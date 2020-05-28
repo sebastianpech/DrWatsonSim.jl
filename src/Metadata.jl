@@ -107,14 +107,14 @@ end
 Base.getindex(m::Metadata, field::String) = m.data[field]
 function Base.setindex!(m::Metadata, val, field::String)
     m.data[field] = val
-    @async save_metadata(m)
+    save_metadata(m)
     return val
 end
 
 Base.keys(m::Metadata) = keys(m.data)
 function Base.delete!(m::Metadata, field)
     delete!(m.data,field)
-    @async save_metadata(m)
+    save_metadata(m)
     return m
 end
 
