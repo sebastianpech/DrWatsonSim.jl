@@ -96,8 +96,7 @@ function remove_index_entry(id::Int)
     return nothing
 end
 
-function find_file_in_index(path)
-    index = BSON.load(metadataindex())
+function find_file_in_index(path; index = BSON.load(metadataindex()))
     for id in keys(index)
         if index[id] == path 
             return id
