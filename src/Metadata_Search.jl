@@ -9,6 +9,7 @@ function safe_load_index()
     return index
 end
 
+
 function get_metadata(path::String; include_parents=true)
     rel_path = relpath(path, projectdir())
     index = safe_load_index()
@@ -32,6 +33,12 @@ function get_metadata(f::Function)
         f(m) && push!(ms, m)
     end
     return ms
+end
+
+function get_metadata() 
+    return get_metadata() do m
+        true
+    end
 end
 
 function get_metadata(field::String, value) 
