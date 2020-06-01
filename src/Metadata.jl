@@ -20,9 +20,12 @@ Base.iterate(m::Metadata, args...; kwargs...) = iterate(m.data, args...; kwargs.
 
 Metadata!(path::String) = Metadata(path, overwrite=true)
 
+project_rel_path(path) = relpath(abspath(path), projectdir())
+get_stored_path(m::Metadata) = getfield(m,:path)
+
 function Metadata(path::String; overwrite=false)
     assert_metadata_directory()
-    rel_path = relpath(path, projectdir())
+    rel_path = project_rel_path(path)
     # Check if there is already an entry for that file in the index
     lock("metadata")
     semaphore_enter("indexread")
@@ -40,7 +43,7 @@ function Metadata(path::String; overwrite=false)
     else
         lock("metadata", wait_for_semaphore="indexread")
         m = Metadata(get_next_identifier(), rel_path, mtime(path), Dict{String,Any}())
-        add_index_entry(m.id, m.path)
+        add_index_entry(m.id, get_stored_path(m))
         save_metadata(m)
         unlock("metadata")
     end
@@ -50,7 +53,7 @@ end
 function Metadata(id::Int, path::String)
     assert_metadata_directory()
     lck_path = metadatadir(to_reserved_identifier_name(id))
-    rel_path = relpath(path, projectdir())
+    rel_path = project_rel_path(path)
     lock("metadata", wait_for_semaphore="indexread")
     if !isfile(lck_path) 
         unlock("metadata")
@@ -61,7 +64,7 @@ function Metadata(id::Int, path::String)
         error("There is already metadata stored for '$path'.")
     end
     m = Metadata(id, rel_path, mtime(rel_path), Dict{String, Any}())
-    add_index_entry(m.id, m.path)
+    add_index_entry(m.id, get_stored_path(m))
     save_metadata(m)
     unlock("metadata")
     return m
@@ -104,6 +107,12 @@ function find_file_in_index(path; index = BSON.load(metadataindex()))
     end
 end
 
+Base.setproperty!(m::Metadata, sym::Symbol, val) = error("The field '$sym' is treated as immutable and cannot be updated directly.")
+Base.getproperty(m::Metadata, sym::Symbol) = getproperty(m, Val(sym))
+getproperty(m::Metadata, ::Val{T}) where T = getfield(m, T)
+getproperty(m::Metadata, ::Val{:path}) = projectdir(getfield(m, :path))
+
+
 Base.getindex(m::Metadata, field::String) = m.data[field]
 function Base.setindex!(m::Metadata, val, field::String)
     m.data[field] = val
@@ -119,7 +128,7 @@ function Base.delete!(m::Metadata, field)
 end
 
 function rename!(m::Metadata, path)
-    rel_path = relpath(path, projectdir())
+    rel_path = project_rel_path(path)
     assert_metadata_directory()
     lock("metadata", wait_for_semaphore="indexread")
     if find_file_in_index(rel_path) != nothing 
@@ -128,7 +137,7 @@ function rename!(m::Metadata, path)
     end
     add_index_entry(m.id, rel_path)
     unlock("metadata")
-    m.path = rel_path
+    setfield!(m, :path, rel_path)
 end
 
 function Base.delete!(m::Metadata)
@@ -140,12 +149,12 @@ function Base.delete!(m::Metadata)
         error("There is no metadata storage for id $(m.path)")
     end
     rm(file)
-    remove_index_entry(m.id, m.path)
+    remove_index_entry(m.id, get_stored_path(m))
     unlock("metadata")
 end
 
 function save_metadata(m::Metadata)
-    m.mtime = mtime(m.path)
+    setfield!(m,:mtime,mtime(m.path))
     BSON.bson(metadatadir(to_file_name(m.id)),Dict(string(field)=>getfield(m,field) for field in fieldnames(Metadata)))
     free_identifier(m.id)
 end

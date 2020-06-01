@@ -92,7 +92,7 @@ include("helper_functions.jl")
             @testset "Metadata creation" begin
                 m = Metadata(datadir("fileA"))
                 mb = Metadata(datadir("fileB"))
-                @test m.path == joinpath("data","fileA")
+                @test m.path == datadir("fileA")
                 @test isfile(ds.metadatadir(ds.to_file_name(1)))
                 @test isfile(ds.metadatadir(ds.to_file_name(2)))
                 @test m.mtime == 0
