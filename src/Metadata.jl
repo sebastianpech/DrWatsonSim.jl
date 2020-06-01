@@ -145,6 +145,7 @@ function Base.delete!(m::Metadata)
 end
 
 function save_metadata(m::Metadata)
+    m.mtime = mtime(m.path)
     BSON.bson(metadatadir(to_file_name(m.id)),Dict(string(field)=>getfield(m,field) for field in fieldnames(Metadata)))
     free_identifier(m.id)
 end
