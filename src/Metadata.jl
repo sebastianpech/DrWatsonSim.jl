@@ -24,6 +24,7 @@ project_rel_path(path) = relpath(abspath(path), projectdir())
 get_stored_path(m::Metadata) = getfield(m,:path)
 
 function Metadata(path::String; overwrite=false)
+    (isfile(path) || isdir(path)) || @warn "There is no file or folder at '$path'."
     assert_metadata_directory()
     rel_path = project_rel_path(path)
     # Check if there is already an entry for that file in the index
@@ -51,6 +52,7 @@ function Metadata(path::String; overwrite=false)
 end
 
 function Metadata(id::Int, path::String)
+    (isfile(path) || isdir(path)) || @warn "There is no file or folder at '$path'."
     assert_metadata_directory()
     lck_path = metadatadir(to_reserved_identifier_name(id))
     rel_path = project_rel_path(path)
