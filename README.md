@@ -95,14 +95,15 @@ dicts = dict_list(allparams)
 @run makesim dicts datadir("sims")
 ```
 
-`@run` calls `makesim` on all elements from `dicts` and provides `datadir("sims")` as an output folder, however this is actually done in new Julia processes, that match the original call to the script above.
+`@run` calls `makesim` on all elements from `dicts` and provides `datadir("sims")` as an output folder. 
+However, the actual call to `makesim` is done in new Julia processes, that matches the original call to the script above.
 The distinction between the two modes, the initialization and the actual simulation is done using environmental variables.
 
 1. Run `julia script_from_above.jl`
 2. Using the metadata functions, a new unique id is generated and simulation folder with this id is created in the output folder
 3. Metadata for the generated id is written containing information about the calling environment and the parameters
 4. For every parameter a new detached Julia process is spawned with the same calling configuration as in (1), except additional environmental variables are set containing metadata id of this run.
-5. With this variables set, the script now behaves differently. The function `simdir()` is now provided which gives the path to the assigned simulation directory (In the above configuration `simdir("output.bson")` equal `datadir("sims",id,"output.bson")`), and instead of looping over all configuration now the on configuration identified by the metadata id runs.
+5. With this variables set, the script now behaves differently. The function `simdir()` is now provided which gives the path to the assigned simulation directory (In the above configuration `simdir("output.bson")` equal `datadir("sims",id,"output.bson")`), and instead of looping over all configuration now the one configuration identified by the metadata id runs.
 
 For adding additional metadata while in simulation mode, one can place eg. this
 
@@ -114,4 +115,13 @@ end
 ```
 
 before the `@run` call
+
+## Retrieving Metadata
+
+The function `get_metadata` is provided for faster and simpler querying of the metadata database:
+
+- `get_metadata()` Return all stored entries
+- `get_metadata(path::String)` Return the entry for `path`, if none found, search parent folders for data
+- `get_metadata(f::Function)` Return all entries `m` for which `f(m) == true`
+- `get_metadata(field::String,value)` Return all entries where `field` has the value `value`
 
