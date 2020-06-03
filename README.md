@@ -45,10 +45,8 @@ Metadata with 4 entries:
 There is no need for an additional call to actually save the metadata, it's done automatically on every change.
 
 The data can be retrieved using the same call as during creating eg. `Metadata(datadir("somefile"))`. 
-Alternatively, the data can be loaded using eg. `Metadata(1)`.
-The id is stored in the `id` field for `Metadata`.
-Besides the `path` and the unique entry `id`, the `mtime` of the files is used for recognition.
-If current `mtime` is newer than the stored one, `DrWatsonSim` issues a warning, that the metadata might not reflect the actual file content.
+Besides the `path`, the `mtime` of the files is used for recognition.
+If the current `mtime` is newer than the stored one, `DrWatsonSim` issues a warning, that the metadata might not reflect the actual file content.
 
 There is an additional method `Metadata!` that overwrites any existing entry for the given path.
 
@@ -99,17 +97,20 @@ dicts = dict_list(allparams)
 However, the actual call to `makesim` is done in new Julia processes, that matches the original call to the script above.
 The distinction between the two modes, the initialization and the actual simulation is done using environmental variables.
 
+The simulation id is generated based on the directory that is passed in the `@run` call.
+It's the smallest possible positive integer for which no folder in the provided directory exists.
+
 1. Run `julia script_from_above.jl`
-2. Using the metadata functions, a new unique id is generated and simulation folder with this id is created in the output folder
-3. Metadata for the generated id is written containing information about the calling environment and the parameters
-4. For every parameter a new detached Julia process is spawned with the same calling configuration as in (1), except additional environmental variables are set containing metadata id of this run.
-5. With this variables set, the script now behaves differently. The function `simdir()` is now provided which gives the path to the assigned simulation directory (In the above configuration `simdir("output.bson")` equal `datadir("sims",id,"output.bson")`), and instead of looping over all configuration now the one configuration identified by the metadata id runs.
+2. Scan the provided folder for the next available simulation id and created the simulation directory (`simdir()`)
+3. Metadata for the generated folder is written containing information about the calling environment and the parameters
+4. For every parameter a new detached Julia process is spawned with the same calling configuration as in (1), except additional environmental variables are set containing the simulation id of this run.
+5. With this variables set, the script now behaves differently. The function `simdir()` is now provided which gives the path to the assigned simulation directory (In the above configuration `simdir("output.bson")` equal `datadir("sims",id,"output.bson")`), and instead of looping over all configuration now the one configuration identified by the id runs by loading the associated metadata.
 
 For adding additional metadata while in simulation mode, one can place eg. this
 
 ```julia
 if in_simulation_mode()
-    m = Metadata(simid())
+    m = Metadata(simdir())
     m["extra"] = "Some more info here"
 end
 ```
@@ -125,3 +126,12 @@ The function `get_metadata` is provided for faster and simpler querying of the m
 - `get_metadata(f::Function)` Return all entries `m` for which `f(m) == true`
 - `get_metadata(field::String,value)` Return all entries where `field` has the value `value`
 
+## Design
+
+Metadata is stored in a separated folder `.metadata` inside the project directory.
+The filenames are generated based on a file path `p` as follows:
+
+1. If `p` is a relative path, make it absolute using `abspath`, otherwise leave `p` as it is
+2. Make `p` relative to the project directory (`projectdir()`). This way metadata can be retrieved independent of the location of the project directory.
+3. Replace the file separators with `/`. This way metadata can be retrieved on any OS.
+4. Use `hash` to generated the final metadata filename for `p`
