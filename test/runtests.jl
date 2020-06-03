@@ -12,13 +12,11 @@ include("helper_functions.jl")
 @testset "DrWatsonSim.jl" begin
     @testset "Metadata" begin
         @eval ds max_lock_retries = 10
+
         dummy_project() do folder
             @testset "Locking functions" begin 
                 @test_logs (:info, r"creating") ds.assert_metadata_directory()
                 # Check if index file was created
-                @test isfile(joinpath(folder,ds.metadata_folder_name,ds.metadata_index))
-                index = BSON.load(ds.metadataindex())
-                @test index == Dict{Int,Any}()
                 ds.lock("metadata")
                 @test isdir(ds.metadatadir("metadata.lck"))
                 ds.lock("foo")
@@ -33,11 +31,6 @@ include("helper_functions.jl")
                 @test_throws ErrorException ds.unlock("metadata")
                 ds.lock("metadata")
                 ds.unlock("metadata")
-                ds.reserve_identifier(1)            
-                @test isfile(ds.metadatadir(ds.to_reserved_identifier_name(1)))
-                @test_throws ErrorException ds.reserve_identifier(1)
-                ds.free_identifier(1)
-                @test !isfile(ds.metadatadir(ds.to_reserved_identifier_name(1)))
                 @test ds.semaphore_status("bar") == 0
                 ds.semaphore_enter("bar")
                 @test isfile(ds.metadatadir("bar.sem"))
@@ -77,59 +70,28 @@ include("helper_functions.jl")
         dummy_project() do folder
             @testset "Identifer Creation" begin
                 ds.assert_metadata_directory()
-                id = ds.get_next_identifier()
-                @test id == 1
-                @test isfile(ds.metadatadir(ds.to_reserved_identifier_name(1)))
-                ds.free_identifier(1)
-                id = ds.get_next_identifier()
-                @test id == 1
-                id = ds.get_next_identifier()
-                @test id == 2
+                @test ds.hash_path(datadir("sims","a.bson")) == hash("data/sims/a.bson")
             end
         end
 
         dummy_project() do folder
             @testset "Metadata creation" begin
                 m = Metadata(datadir("fileA"))
-                mb = Metadata(datadir("fileB"))
                 @test m.path == datadir("fileA")
-                @test isfile(ds.metadatadir(ds.to_file_name(1)))
-                @test isfile(ds.metadatadir(ds.to_file_name(2)))
+                @test isfile(ds.metadatadir(ds.hash_path(m.path)|>ds.to_file_name))
+                mb = Metadata(datadir("fileB"))
+                @test isfile(ds.metadatadir(ds.hash_path(mb.path)|>ds.to_file_name))
                 @test m.mtime == 0
-                index = BSON.load(ds.metadataindex())
-                @test index[1] == joinpath("data","fileA")
-                @test index[2] == joinpath("data","fileB")
-                m2 = Metadata(datadir("fileA"))
-                @test m.id == m2.id
-                m3 = Metadata(1)
-                @test m.path == m3.path
                 touch(datadir("fileA"))
                 @test_logs (:warn, r"changed") Metadata(datadir("fileA"))
                 @test_nowarn m = Metadata!(datadir("fileA"))
                 @test m.mtime > 0
                 A = rand(3,3)
                 m["some_data"] = A
-                yield() # Allow async task to finish
-                raw_loaded = BSON.load(ds.metadatadir(ds.to_file_name(1)))
+                raw_loaded = BSON.load(ds.metadatadir(ds.to_file_name(ds.hash_path(m.path))))
                 @test raw_loaded["data"]["some_data"] == A
-                id = ds.reserve_next_identifier()
-                @test id == 3
-                @test isfile(ds.metadatadir(ds.to_reserved_identifier_name(3)))
-                @test !isfile(ds.metadatadir(ds.to_file_name(3)))
-                m = Metadata(datadir("fileC"))
-                @test m.id == 4
-                m = Metadata(id, datadir("fileD"))
-                @test !isfile(ds.metadatadir(ds.to_reserved_identifier_name(3)))
-                @test isfile(ds.metadatadir(ds.to_file_name(3)))
-                id = ds.reserve_next_identifier()
-                @test_throws ErrorException Metadata(id, datadir("fileD"))
-                m = Metadata(datadir("fileD"))
-                rename!(m, datadir("fileE"))
-                index = BSON.load(ds.metadataindex())
-                @test index[m.id] == joinpath("data","fileE")
-                Metadata(id, datadir("fileD"))
-                index = BSON.load(ds.metadataindex())
-                @test index[id] == joinpath("data","fileD")
+                rename!(m, datadir("fileC"))
+                @test "some_data" in keys(Metadata(datadir("fileC")))
             end
         end
 
@@ -142,20 +104,44 @@ include("helper_functions.jl")
                         s = rand(1:100)
                         m["data"] = rand(s,s)
                         for j in 1:10
-                            rename!(m, datadir("file$(m.id)_$(j)"))
+                            rename!(m, datadir("file$(i)_$j"))
                         end
                     end
                 end
-                index = BSON.load(ds.metadataindex())
-                for id in keys(index)
-                    m = Metadata(id)
-                    @test index[id] == joinpath("data","file$(id)_10")
+                index = filter(x->endswith(x,".bson"),readdir(ds.metadatadir()))
+                @test length(index) == 500
+                files = Set{String}()
+                for f in index
+                    d = BSON.load(ds.metadatadir(f))
+                    @test endswith(d["path"],"_10")
+                    push!(files,d["path"])
                 end
+                @test length(files) == 500
             end
         end
+
     end
-    @testset "Simulations" begin
+    @testset "Simulation" begin
         @eval ds max_lock_retries = 10000
+
+        dummy_project() do folder
+            @testset "id generation" begin
+                mkdir(datadir("sims2"))
+                @test ds.get_next_simulation_id(datadir("sims")) == 1
+                @test ds.get_next_simulation_id(datadir("sims2")) == 1
+                @test ds.get_next_simulation_id(datadir("sims2")) == 2
+                rm(datadir("sims2","1"))
+                @test ds.get_next_simulation_id(datadir("sims2")) == 1
+                for i in 1:10
+                    @test ds.get_next_simulation_id(datadir("sims")) == 1+i
+                end
+                for i in 1:10
+                    rm(datadir("sims","$i"))
+                end
+                @test ds.get_next_simulation_id(datadir("sims")) == 1
+            end
+        end
+
         dummy_project() do folder
             @testset "long running computation" begin
                 Pkg.develop(PackageSpec(url=joinpath(@__DIR__,"..")))
@@ -172,7 +158,6 @@ include("helper_functions.jl")
                     m = Metadata(folder)
                     p = m["parameters"]
                     @test p[:a]^p[:b] == result
-                    @test m.path == Metadata(i).path
                     @test m["type"] == "Simple Computation"
                     @test m["started at"] < now()
                     m_new = Metadata(joinpath(folder,"newfile"))
@@ -181,4 +166,23 @@ include("helper_functions.jl")
             end
         end
     end
+    
+    @testset "Searching" begin
+        dummy_project() do folder
+            @testset "get by path" begin
+                ds.assert_metadata_directory()
+                m = Metadata(datadir("sims","1"))
+                m["Foo"] = "Bar"
+                m2 = get_metadata(datadir("sims","1","111"))
+                @test m2["Foo"] == m["Foo"]
+                @test get_metadata(datadir("sims","1","111"),include_parents=false) == nothing
+                m = Metadata(datadir("sims","2"))
+                m["Foo"] = "Baz"
+                @test length(get_metadata()) == 2
+                @test length(get_metadata("Foo","Baz")) == 1
+                @test get_metadata("Foo","Baz")[1].path == m.path
+            end
+        end
+    end
+
 end
