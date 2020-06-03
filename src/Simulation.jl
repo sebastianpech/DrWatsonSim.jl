@@ -28,7 +28,7 @@ function get_next_simulation_id(folder)
             mkdir(joinpath(folder,to_folder_name(id)))
             return id
         catch e
-            if e.code != -17
+            if !isa(e, Base.IOError)
                 rethrow(e)
             end
             id += 1

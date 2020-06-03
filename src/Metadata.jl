@@ -121,7 +121,7 @@ function assert_metadata_directory()
         try
             mkdir(metadata_directory)
         catch e
-            if e.code != -17
+            if !isa(e, Base.IOError)
                 rethrow(e)
             end
         end
