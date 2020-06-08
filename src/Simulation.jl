@@ -65,9 +65,9 @@ function run_simulation(f,param,directory,source; wait_for_finish=false)
         m["ENV"] = env
         env[ENV_SIM_FOLDER] = folder
         env[ENV_SIM_ID] = string(id)
-        return @async run(detach(setenv(`$julia $(PROGRAM_FILE)`, env)))
+        return @async run(setenv(`$julia $(PROGRAM_FILE)`, env), wait=wait_for_finish)
     end
-    (!in_simulation_mode() && wait_for_finish) && wait.(tasks)
+    !in_simulation_mode() && wait.(tasks)
 end
 
 function rerun_simulation(f,folder,source; wait_for_finish=false)
@@ -90,8 +90,8 @@ function rerun_simulation(f,folder,source; wait_for_finish=false)
     m["ENV"] = env
     env[ENV_SIM_FOLDER] = folder
     env[ENV_SIM_ID] = string(id)
-    t = @async run(detach(setenv(`$julia $(PROGRAM_FILE)`, env)))
-    (!in_simulation_mode() && wait_for_finish) && wait(t)
+    t = @async run(setenv(`$julia $(PROGRAM_FILE)`, env), wait=wait_for_finish)
+    !in_simulation_mode() && wait(t)
 end
 
 macro run(f, p, directory)
