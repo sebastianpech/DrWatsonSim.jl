@@ -2,7 +2,8 @@ module DrWatsonSim
 
 using DrWatson
 using BSON
-using Dates
+using Reexport
+@reexport using Dates
 
 include("Locking.jl")
 include("Metadata.jl")

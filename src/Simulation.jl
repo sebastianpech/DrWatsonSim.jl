@@ -46,7 +46,7 @@ function run_in_simulation_mode(f)
 end
 
 function run_simulation(f,param,directory,source; wait_for_finish=false)
-    simulation_submit_time = now()
+    simulation_submit_time = DrWatsonSim.now()
     if in_simulation_mode()
         run_in_simulation_mode(f)
     else
@@ -88,7 +88,7 @@ function rerun_simulation(f,folder,source; wait_for_finish=false)
         save_metadata(m)
         julia = Base.julia_cmd()
         env = copy(ENV)
-        m["simulation_submit_time"] = now()
+        m["simulation_submit_time"] = DrWatsonSim.now()
         m["simulation_submit_group"] = simulation_submit_group
         m["simulation_id"] = id
         m["parameters"] = p
