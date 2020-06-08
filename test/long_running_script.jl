@@ -30,4 +30,4 @@ if in_simulation_mode()
     println("$(simid()): Done creating new file")
 end
 
-@run x->long_running_computation(x, simdir("output.bson")) dict_list(parameter) datadir("sims")
+@runsync x->long_running_computation(x, simdir("output.bson")) dict_list(parameter) datadir("sims")

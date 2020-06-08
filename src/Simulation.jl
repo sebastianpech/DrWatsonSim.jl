@@ -1,4 +1,4 @@
-export simdir, simid, @run, in_simulation_mode
+export simdir, simid, @run, @runsync, in_simulation_mode
 
 const ENV_SIM_FOLDER = "SIMULATION_FOLDER"
 const ENV_SIM_ID = "SIMULATION_ID"
@@ -39,8 +39,8 @@ end
 
 run_simulation(f,p,args...) = run_simulation(f, [p], args...)
 
-function run_simulation(f,param,directory,source)
-    @sync for p in param
+function run_simulation(f,param,directory,source; wait_for_finish=false)
+    tasks = map(param) do p
         if in_simulation_mode()
             m = Metadata(simdir())
             @assert m["simulation_id"] == simid()
@@ -61,11 +61,17 @@ function run_simulation(f,param,directory,source)
         m["ENV"] = env
         env[ENV_SIM_FOLDER] = folder
         env[ENV_SIM_ID] = string(id)
-        @async run(detach(setenv(`$julia $(PROGRAM_FILE)`, env)))
+        return @async run(detach(setenv(`$julia $(PROGRAM_FILE)`, env)))
     end
+    (!in_simulation_mode() && wait_for_finish) && wait.(tasks)
 end
 
 macro run(f, p, directory)
     source=QuoteNode(__source__)
     :(run_simulation($(esc(f)), $(esc(p)), $(esc(directory)), $source))
+end
+
+macro runsync(f, p, directory)
+    source=QuoteNode(__source__)
+    :(run_simulation($(esc(f)), $(esc(p)), $(esc(directory)), $source, wait_for_finish=true))
 end
