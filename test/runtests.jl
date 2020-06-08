@@ -165,8 +165,27 @@ include("helper_functions.jl")
                 end
             end
         end
+
+        dummy_project() do folder
+            @testset "Rerun simulation" begin
+                Pkg.develop(PackageSpec(url=joinpath(@__DIR__,"..")))
+                pkg"add BSON"
+                pkg"add Dates"
+                file = scriptsdir("long_re_running_script.jl")
+                cp(joinpath(@__DIR__, "long_re_running_script.jl"), file)
+                run(`julia $file`)
+                for i in 1:4
+                    folder = datadir("sims","$i")
+                    fileA = datadir("sims","$i","output.bson")
+                    fileB = datadir("sims","$i","output_first_run.bson")
+                    resultA = BSON.load(fileA)[:result]
+                    resultB = BSON.load(fileB)[:result]
+                    @test resultA == resultB
+                end
+            end
+        end
     end
-    
+
     @testset "Searching" begin
         dummy_project() do folder
             @testset "get by path" begin
