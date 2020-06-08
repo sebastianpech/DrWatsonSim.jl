@@ -46,18 +46,50 @@ function run_in_simulation_mode(f)
 end
 
 function run_simulation(f,param,directory,source; wait_for_finish=false)
-    tasks = map(param) do p
-        if in_simulation_mode()
-            run_in_simulation_mode(f)
-            return
+    simulation_submit_time = now()
+    if in_simulation_mode()
+        run_in_simulation_mode(f)
+    else
+        simulation_ids = map(param) do _
+            get_next_simulation_id(directory)
         end
-        id = get_next_simulation_id(directory)
-        folder = joinpath(directory,to_folder_name(id))
-        m = Metadata(folder)
+        tasks = map(zip(param,simulation_ids)) do (p,id)
+            folder = joinpath(directory,to_folder_name(id))
+            m = Metadata(folder)
+            tag!(m.data, source=source)
+            save_metadata(m)
+            julia = Base.julia_cmd()
+            env = copy(ENV)
+            m["simulation_submit_time"] = simulation_submit_time
+            m["simulation_submit_group"] = [standardize_path(joinpath(directory,to_folder_name(i))) for i in simulation_ids]
+            m["simulation_id"] = id
+            m["parameters"] = p
+            m["mtime_scriptfile"] = mtime(PROGRAM_FILE)
+            m["julia_command"] = julia
+            m["ENV"] = env
+            env[ENV_SIM_FOLDER] = folder
+            env[ENV_SIM_ID] = string(id)
+            return @async run(setenv(`$julia $(PROGRAM_FILE)`, env), wait=wait_for_finish)
+        end
+        !in_simulation_mode() && wait.(tasks)
+    end
+end
+
+function rerun_simulation(f,folder,source; wait_for_finish=false)
+    if in_simulation_mode()
+        run_in_simulation_mode(f)
+    else
+        m_original = Metadata(folder)
+        p = m_original["parameters"]
+        id = m_original["simulation_id"]
+        simulation_submit_group = m_original["simulation_submit_group"]
+        m = Metadata!(folder)
         tag!(m.data, source=source)
         save_metadata(m)
         julia = Base.julia_cmd()
         env = copy(ENV)
+        m["simulation_submit_time"] = now()
+        m["simulation_submit_group"] = simulation_submit_group
         m["simulation_id"] = id
         m["parameters"] = p
         m["mtime_scriptfile"] = mtime(PROGRAM_FILE)
@@ -65,33 +97,9 @@ function run_simulation(f,param,directory,source; wait_for_finish=false)
         m["ENV"] = env
         env[ENV_SIM_FOLDER] = folder
         env[ENV_SIM_ID] = string(id)
-        return @async run(setenv(`$julia $(PROGRAM_FILE)`, env), wait=wait_for_finish)
+        t = @async run(setenv(`$julia $(PROGRAM_FILE)`, env), wait=wait_for_finish)
+        wait(t)
     end
-    !in_simulation_mode() && wait.(tasks)
-end
-
-function rerun_simulation(f,folder,source; wait_for_finish=false)
-    if in_simulation_mode()
-        run_in_simulation_mode(f)
-        return
-    end
-    m_original = Metadata(folder)
-    p = m_original["parameters"]
-    id = m_original["simulation_id"]
-    m = Metadata!(folder)
-    tag!(m.data, source=source)
-    save_metadata(m)
-    julia = Base.julia_cmd()
-    env = copy(ENV)
-    m["simulation_id"] = id
-    m["parameters"] = p
-    m["mtime_scriptfile"] = mtime(PROGRAM_FILE)
-    m["julia_command"] = julia
-    m["ENV"] = env
-    env[ENV_SIM_FOLDER] = folder
-    env[ENV_SIM_ID] = string(id)
-    t = @async run(setenv(`$julia $(PROGRAM_FILE)`, env), wait=wait_for_finish)
-    !in_simulation_mode() && wait(t)
 end
 
 macro run(f, p, directory)

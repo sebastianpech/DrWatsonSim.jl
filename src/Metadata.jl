@@ -47,7 +47,8 @@ Metadata!(path::String) = Metadata(path, overwrite=true)
 project_rel_path(path) = relpath(abspath(path), projectdir())
 get_stored_path(m::Metadata) = getfield(m,:path)
 
-hash_path(path) = hash(join(splitpath(project_rel_path(path)), "/"))
+standardize_path(path) = join(splitpath(project_rel_path(path)), "/")
+hash_path(path) = hash(standardize_path(path))
 to_file_name(x) = string(x)*".bson"
 
 function load_metadata(path)

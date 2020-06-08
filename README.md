@@ -139,6 +139,19 @@ with
 @rerun makesim datadir("sims","3")
 ```
 
+### Metadata stored for simulations
+
+| key                         | description                                                                                  |
+|-----------------------------|----------------------------------------------------------------------------------------------|
+| `"simulation_submit_time"`  | `Dates.now()` when `@run`, and others, were called                                           |
+| `"simulation_submit_group"` | Project directory relative paths to simulation folders of jobs that were started in parallel |
+| `"simulation_id"`           | Unique id of this simulation run. Is equal to the name of the simulation folder              |
+| `"parameters"`              | Parameters for this simulation run ie. `p` in `f(p)`                                         |
+| `"mtime_scriptfile"`        | `mtime` of the sending script file                                                           |
+| `"julia_command"`           | Full julia command that was used for calling the script file                                 |
+| `"ENV"`                     | Current environment variables                                                                |
+
+
 ## Retrieving Metadata
 
 The function `get_metadata` is provided for faster and simpler querying of the metadata database:

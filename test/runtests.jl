@@ -162,6 +162,7 @@ include("helper_functions.jl")
                     @test m["started at"] < now()
                     m_new = Metadata(joinpath(folder,"newfile"))
                     @test m_new["extra"] == "This should be blocked"
+                    @test m["simulation_submit_group"] == ["data/sims/$j" for j in 1:4]
                 end
             end
         end

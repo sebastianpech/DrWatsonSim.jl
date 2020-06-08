@@ -5,15 +5,16 @@ version = "0.1.0"
 
 [deps]
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 
 [compat]
 julia = "1"
 
 [extras]
-Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [targets]
 test = ["Test", "Pkg", "Dates"]
