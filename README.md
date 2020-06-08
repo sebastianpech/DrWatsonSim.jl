@@ -117,6 +117,28 @@ end
 
 before the `@run` call
 
+### Waiting for simulations
+
+By default simulations run asynchronous, so the calling script doesn't wait for the simulations to finish.
+In order to wait for the sub processes, one can use `@runsync` inplace of `@run`.
+
+### Rerunning simulations
+
+Sometimes it's necessary to rerun a simulation with the same parameters.
+This can be done by using `@rerun` or its synchronous counterpart `@rerunsync`.
+The only arguments needed, are the function and the simulation directory.
+So to rerun the simulation in simulation folder 3 from the above script, one just replaces
+
+```julia
+@run makesim dicts datadir("sims")
+```
+
+with
+
+```julia
+@rerun makesim datadir("sims","3")
+```
+
 ## Retrieving Metadata
 
 The function `get_metadata` is provided for faster and simpler querying of the metadata database:
