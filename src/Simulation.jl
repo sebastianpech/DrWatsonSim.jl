@@ -69,9 +69,17 @@ function run_simulation(f,param,directory,source; wait_for_finish=false)
             m["ENV"] = env
             env[ENV_SIM_FOLDER] = folder
             env[ENV_SIM_ID] = string(id)
-            return @async run(setenv(`$julia $(PROGRAM_FILE)`, env), wait=wait_for_finish)
+            return @async begin
+                run(setenv(`$julia $(PROGRAM_FILE)`, env), wait=wait_for_finish)
+            end
         end
-        !in_simulation_mode() && wait.(tasks)
+        print("Starting $(length(simulation_ids)) job(s):")
+        for id in simulation_ids
+            project_rel_path = standardize_path(joinpath(directory,to_folder_name(id)))
+            print("\n  $project_rel_path")
+        end
+        println()
+        wait.(tasks)
     end
 end
 
