@@ -129,7 +129,7 @@ function assert_metadata_directory()
     end
 end
 
-function DrWatson.tag!(m::Metadata, args...; kwargs...) 
+function DrWatson.tag!(m, args...; kwargs...)
     tag!(m.data, args...; kwargs...)
-    return m
+    save_metadata(m)
 end
