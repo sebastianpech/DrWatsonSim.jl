@@ -1,5 +1,7 @@
 export Metadata, Metadata!, rename!, delete!
 
+import Base.==
+
 const metadata_folder_name = ".metadata"
 const max_lock_retries = 10
 const metadata_lock = "metadata.lck"
@@ -60,6 +62,15 @@ function find_file_in_index(path)
     file = metadatadir(hash_path(path)|>to_file_name)
     isfile(file) && return file
     return nothing
+end
+
+function ==(a::Metadata,b::Metadata)
+    for k ∈ fieldnames(Metadata)
+        if getfield(a,k) != getfield(b,k)
+            return false
+        end
+    end
+    return true
 end
 
 Base.setproperty!(m::Metadata, sym::Symbol, val) = error("The field '$sym' is treated as immutable and cannot be updated directly.")
