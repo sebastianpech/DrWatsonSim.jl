@@ -1,7 +1,7 @@
 name = "DrWatsonSim"
 uuid = "2380ba89-4eda-4b1c-913c-f10e6d4aa00f"
 authors = ["Sebastian Pech <sebastian.pech@me.com> and contributors"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
