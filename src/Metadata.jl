@@ -3,7 +3,7 @@ export Metadata, Metadata!, rename!, delete!
 import Base.==
 
 const metadata_folder_name = ".metadata"
-const max_lock_retries = 10
+const max_lock_retries = 100
 const metadata_lock = "metadata.lck"
 
 metadatadir(args...) = projectdir(metadata_folder_name, args...)
