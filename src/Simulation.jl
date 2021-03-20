@@ -71,7 +71,7 @@ function add_simulation_metadata!(::AbstractSimulationEnvironment,
     tag!(m, source=source)
 end
 
-submit_command(::AbstractSimulationEnvironment) = Base.julia_cmd()
+submit_command(::AbstractSimulationEnvironment,id,env) = Base.julia_cmd()
 
 function run_simulation(t::AbstractSimulationEnvironment,f,param,directory,source; wait_for_finish=false)
     if in_simulation_mode()
@@ -87,8 +87,9 @@ function run_simulation(t::AbstractSimulationEnvironment,f,param,directory,sourc
         tasks = map(zip(param,simulation_ids)) do (p,id)
             folder = joinpath(directory,to_folder_name(id))
             m = Metadata(folder)
-            command = submit_command(t)
             env = copy(ENV)
+
+            command = submit_command(t, id, env)
 
             # Add the metadata for the simulation mode.
             # This is the optional data.
@@ -128,8 +129,8 @@ function rerun_simulation(t::AbstractSimulationEnvironment,f,folder,source; wait
         id = from_folder_name(basename(folder))
         m = Metadata!(folder)
 
-        command = Base.julia_cmd()
         env = copy(ENV)
+        command = submit_command(t, id, env)
 
         add_simulation_metadata!(t, m, simulation_id=id, simulation_submit_time=simulation_submit_time,
                                  simulation_submit_group=simulation_submit_group,
