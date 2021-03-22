@@ -89,6 +89,9 @@ function run_simulation(t::AbstractSimulationEnvironment,f,param,directory,sourc
             m = Metadata(folder)
             env = copy(ENV)
 
+            env[ENV_SIM_FOLDER] = folder
+            env[ENV_SIM_ID] = string(id)
+
             command = submit_command(t, id, env)
 
             # Add the metadata for the simulation mode.
@@ -100,9 +103,6 @@ function run_simulation(t::AbstractSimulationEnvironment,f,param,directory,sourc
             # Add the parameters as metadata.
             # This is the only metadata that is required
             m["parameters"] = p
-
-            env[ENV_SIM_FOLDER] = folder
-            env[ENV_SIM_ID] = string(id)
 
             return @async begin
                 run(setenv(`$command $(PROGRAM_FILE)`, env), wait=wait_for_finish)
@@ -130,6 +130,10 @@ function rerun_simulation(t::AbstractSimulationEnvironment,f,folder,source; wait
         m = Metadata!(folder)
 
         env = copy(ENV)
+        
+        env[ENV_SIM_FOLDER] = folder
+        env[ENV_SIM_ID] = string(id)
+
         command = submit_command(t, id, env)
 
         add_simulation_metadata!(t, m, simulation_id=id, simulation_submit_time=simulation_submit_time,
@@ -137,10 +141,6 @@ function rerun_simulation(t::AbstractSimulationEnvironment,f,folder,source; wait
                                  scriptfile=PROGRAM_FILE, command=command, env=env, source=source)
 
         m["parameters"] = p
-        
-        env[ENV_SIM_FOLDER] = folder
-        env[ENV_SIM_ID] = string(id)
-
         t = @async run(setenv(`$command $(PROGRAM_FILE)`, env), wait=wait_for_finish)
         wait(t)
     end
