@@ -139,6 +139,38 @@ with
 @rerun makesim datadir("sims","3")
 ```
 
+### Running simulations in custom simulation environments
+
+DrWatsonSim allows implementation of custom simulation environments to run parameter configurations in.
+This is done by subtyping `AbstractSimulationEnvironment`, which then allows a custom definition of the function `DrWatsonSim.submit_command(<:AbstractSimulationEnvironment, id, env)`.
+The default environment is defined a singleton type and is configured to just use julia:
+```julia
+submit_command(::AbstractSimulationEnvironment,id,env) = Base.julia_cmd()
+```
+
+For running jobs using a custom scheduler command (eg. `qsub`) one can use the following code.
+First define a new type. Here, additionally, the number of cpus must be defined, as they are required for the scheduler:
+```julia
+struct GridEngine <: DrWatsonSim.AbstractSimulationEnvironment
+    cpus
+end
+```
+Then define the actual command for submitting:
+```julia
+function DrWatsonSim.submit_command(conf::GridEngine, id, env)
+    wd = env[DrWatsonSim.ENV_SIM_FOLDER] # Simulation folder is stored in environment variable
+    log_out = joinpath(wd,"output.log")
+    log_err = joinpath(wd,"error.log")
+    `qsub -b y -cwd -q nodes.q -V -pe openmpi_fill $(conf.cpus) -N test-$(id) -o $(log_out) -e $(log_err) $(Base.julia_cmd())`
+end
+```
+
+The only further change required, is defining which environment should be used during running the simulation.
+This is done in the final run call:
+```julia
+@runsync GridEngine(4) f parameters datadir("sims")
+```
+
 ### Metadata stored for simulations
 
 | key                         | description                                                                                  |
