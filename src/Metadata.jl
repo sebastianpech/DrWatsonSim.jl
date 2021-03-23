@@ -34,9 +34,12 @@ function Metadata(path::String; overwrite=false)
         save_metadata(m)
     else
         lock("metadata", wait_for_semaphore="indexread")
-        m = Metadata(rel_path, mtime(path), Dict{String,Any}())
-        save_metadata(m)
-        unlock("metadata")
+        try
+            m = Metadata(rel_path, mtime(path), Dict{String,Any}())
+            save_metadata(m)
+        finally
+            unlock("metadata")
+        end
     end
     return m
 end
@@ -96,29 +99,35 @@ function rename!(m::Metadata, path)
     rel_path = project_rel_path(path)
     assert_metadata_directory()
     lock("metadata", wait_for_semaphore="indexread")
-    if find_file_in_index(rel_path) != nothing 
+    try
+        if find_file_in_index(rel_path) != nothing 
+            unlock("metadata")
+            error("There is already metadata stored for '$path'.")
+        end
+        new_metadata_file = metadatadir(hash_path(path)|>to_file_name)
+        old_metadata_file = metadatadir(hash_path(m.path)|>to_file_name)
+        mv(old_metadata_file, new_metadata_file)
+        setfield!(m, :path, rel_path)
+        save_metadata(m)
+    finally
         unlock("metadata")
-        error("There is already metadata stored for '$path'.")
     end
-    new_metadata_file = metadatadir(hash_path(path)|>to_file_name)
-    old_metadata_file = metadatadir(hash_path(m.path)|>to_file_name)
-    mv(old_metadata_file, new_metadata_file)
-    setfield!(m, :path, rel_path)
-    save_metadata(m)
-    unlock("metadata")
 end
 
 function Base.delete!(m::Metadata)
     assert_metadata_directory()
     lock("metadata", wait_for_semaphore="indexread")
-    file = metadatadir(to_file_name(hash_path(m.path)))
-    if !isfile(file)
+    try
+        file = metadatadir(to_file_name(hash_path(m.path)))
+        if !isfile(file)
+            unlock("metadata")
+            error("There is no metadata storage for id $(m.path)")
+        end
+        rm(file)
+        remove_index_entry(m.id, get_stored_path(m))
+    finally
         unlock("metadata")
-        error("There is no metadata storage for id $(m.path)")
     end
-    rm(file)
-    remove_index_entry(m.id, get_stored_path(m))
-    unlock("metadata")
 end
 
 function save_metadata(m::Metadata)
