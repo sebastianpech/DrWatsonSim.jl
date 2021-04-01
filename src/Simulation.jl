@@ -71,7 +71,7 @@ function add_simulation_metadata!(::AbstractSimulationEnvironment,
     tag!(m, source=source)
 end
 
-submit_command(::AbstractSimulationEnvironment,filename,id,env) = `$(Base.julia_cmd() $(PROGRAM_FILE)`
+submit_command(::AbstractSimulationEnvironment,id,env) = `$(Base.julia_cmd()) $(PROGRAM_FILE)`
 
 function run_simulation(t::AbstractSimulationEnvironment,f,param,directory,source; wait_for_finish=false)
     if in_simulation_mode()
