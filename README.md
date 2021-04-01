@@ -145,7 +145,7 @@ DrWatsonSim allows implementation of custom simulation environments to run param
 This is done by subtyping `AbstractSimulationEnvironment`, which then allows a custom definition of the function `DrWatsonSim.submit_command(<:AbstractSimulationEnvironment, id, env)`.
 The default environment is defined a singleton type and is configured to just use julia:
 ```julia
-submit_command(::AbstractSimulationEnvironment,id,env) = Base.julia_cmd()
+submit_command(::AbstractSimulationEnvironment,id,env) = `$(Base.julia_cmd()) $(PROGRAM_FILE)`
 ```
 
 For running jobs using a custom scheduler command (eg. `qsub`) one can use the following code.
@@ -161,7 +161,7 @@ function DrWatsonSim.submit_command(conf::GridEngine, id, env)
     wd = env[DrWatsonSim.ENV_SIM_FOLDER] # Simulation folder is stored in environment variable
     log_out = joinpath(wd,"output.log")
     log_err = joinpath(wd,"error.log")
-    `qsub -b y -cwd -q nodes.q -V -pe openmpi_fill $(conf.cpus) -N test-$(id) -o $(log_out) -e $(log_err) $(Base.julia_cmd())`
+    `qsub -b y -cwd -q nodes.q -V -pe openmpi_fill $(conf.cpus) -N test-$(id) -o $(log_out) -e $(log_err) $(Base.julia_cmd()) $(PROGRAM_FILE)`
 end
 ```
 
@@ -169,6 +169,16 @@ The only further change required, is defining which environment should be used d
 This is done in the final run call:
 ```julia
 @runsync GridEngine(4) f parameters datadir("sims")
+```
+
+Similarly, one can define a custom command for Slurm
+```julia
+function DrWatsonSim.submit_command(conf::Slurm, id, env)
+    wd = env[DrWatsonSim.ENV_SIM_FOLDER]
+    log_out = joinpath(wd,"output.log")
+    cmd_str = string(`$(Base.julia_cmd()) $(PROGRAM_FILE)`)[2:end-1] # remove the backticks from command interpolation
+    `sbatch --export=ALL --nodes=1 --ntasks=$(conf.cpus) --job-name=test-$(id) --time=720:00:00 --output=$(log_out) --wrap=$(cmd_str)`
+end
 ```
 
 ### Metadata stored for simulations
