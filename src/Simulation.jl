@@ -71,7 +71,7 @@ function add_simulation_metadata!(::AbstractSimulationEnvironment,
     tag!(m, source=source)
 end
 
-submit_command(::AbstractSimulationEnvironment,id,env) = Base.julia_cmd()
+submit_command(::AbstractSimulationEnvironment,filename,id,env) = `$(Base.julia_cmd() $(PROGRAM_FILE)`
 
 function run_simulation(t::AbstractSimulationEnvironment,f,param,directory,source; wait_for_finish=false)
     if in_simulation_mode()
@@ -105,7 +105,7 @@ function run_simulation(t::AbstractSimulationEnvironment,f,param,directory,sourc
             m["parameters"] = p
 
             return @async begin
-                run(setenv(`$command $(PROGRAM_FILE)`, env), wait=wait_for_finish)
+                run(setenv(`$command`, env), wait=wait_for_finish)
             end
         end
         print("Starting $(length(simulation_ids)) job(s):")
@@ -141,7 +141,7 @@ function rerun_simulation(t::AbstractSimulationEnvironment,f,folder,source; wait
                                  scriptfile=PROGRAM_FILE, command=command, env=env, source=source)
 
         m["parameters"] = p
-        t = @async run(setenv(`$command $(PROGRAM_FILE)`, env), wait=wait_for_finish)
+        t = @async run(setenv(`$command`, env), wait=wait_for_finish)
         wait(t)
     end
 end
