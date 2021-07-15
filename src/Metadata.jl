@@ -56,9 +56,17 @@ standardize_path(path) = join(splitpath(project_rel_path(path)), "/")
 hash_path(path) = hash(standardize_path(path))
 to_file_name(x) = string(x)*".bson"
 
-function load_metadata(path)
-    entry = BSON.load(path)
-    Metadata([entry[string(field)] for field in fieldnames(Metadata)]...)
+function load_metadata(path; ignore_exceptions=false)
+    try
+        entry = BSON.load(path)
+        Metadata([entry[string(field)] for field in fieldnames(Metadata)]...)
+    catch e
+        if ignore_exceptions
+            return nothing
+        else
+            rethrow(e)
+        end
+    end
 end
 
 function find_file_in_index(path)
