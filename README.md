@@ -60,7 +60,7 @@ Also to justify usage of the simulation methods, the `makesim` function now writ
 using DrWatson
 @quickactivate
 using DrWatsonSim
-using BSON
+using FileIO
 
 function fakesim(a, b, v, method = "linear")
     if method == "linear"
@@ -76,9 +76,9 @@ function makesim(d::Dict)
     @unpack a, b, v, method = d
     r, y = fakesim(a, b, v, method)
     fulld = copy(d)
-    fulld[:r] = r
-    fulld[:y] = y
-    BSON.bson(simdir("output.bson"))
+    fulld["r"] = r
+    fulld["y"] = y
+    save(simdir("output.jld2"),fulld)
 end
 
 allparams = Dict(
@@ -104,7 +104,7 @@ It's the smallest possible positive integer for which no folder in the provided 
 2. Scan the provided folder for the next available simulation id and created the simulation directory (`simdir()`)
 3. Metadata for the generated folder is written containing information about the calling environment and the parameters
 4. For every parameter a new detached Julia process is spawned with the same calling configuration as in (1), except additional environmental variables are set containing the simulation id of this run.
-5. With this variables set, the script now behaves differently. The function `simdir()` is now provided which gives the path to the assigned simulation directory (In the above configuration `simdir("output.bson")` equal `datadir("sims",id,"output.bson")`), and instead of looping over all configuration now the one configuration identified by the id runs by loading the associated metadata.
+5. With this variables set, the script now behaves differently. The function `simdir()` is now provided which gives the path to the assigned simulation directory (In the above configuration `simdir("output.jld2")` equal `datadir("sims",id,"output.jld2")`), and instead of looping over all configuration now the one configuration identified by the id runs by loading the associated metadata.
 
 For adding additional metadata while in simulation mode, one can place eg. this
 

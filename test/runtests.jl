@@ -3,7 +3,7 @@ pkg"activate ."
 using DrWatsonSim
 const ds = DrWatsonSim
 using Test
-using BSON
+using FileIO
 using DrWatson
 using Dates
 
@@ -70,7 +70,7 @@ include("helper_functions.jl")
         dummy_project() do folder
             @testset "Identifer Creation" begin
                 ds.assert_metadata_directory()
-                @test ds.hash_path(datadir("sims","a.bson")) == hash("data/sims/a.bson")
+                @test ds.hash_path(datadir("sims","a.jld2")) == hash("data/sims/a.jld2")
             end
         end
 
@@ -88,7 +88,7 @@ include("helper_functions.jl")
                 @test m.mtime > 0
                 A = rand(3,3)
                 m["some_data"] = A
-                raw_loaded = BSON.load(ds.metadatadir(ds.to_file_name(ds.hash_path(m.path))))
+                raw_loaded = load(ds.metadatadir(ds.to_file_name(ds.hash_path(m.path))))
                 @test raw_loaded["data"]["some_data"] == A
                 rename!(m, datadir("fileC"))
                 @test "some_data" in keys(Metadata(datadir("fileC")))
@@ -108,11 +108,11 @@ include("helper_functions.jl")
                         end
                     end
                 end
-                index = filter(x->endswith(x,".bson"),readdir(ds.metadatadir()))
+                index = filter(x->endswith(x,".jld2"),readdir(ds.metadatadir()))
                 @test length(index) == 500
                 files = Set{String}()
                 for f in index
-                    d = BSON.load(ds.metadatadir(f))
+                    d = load(ds.metadatadir(f))
                     @test endswith(d["path"],"_10")
                     push!(files,d["path"])
                 end
@@ -145,16 +145,16 @@ include("helper_functions.jl")
         dummy_project() do folder
             @testset "long running computation" begin
                 Pkg.develop(PackageSpec(url=joinpath(@__DIR__,"..")))
-                pkg"add BSON"
+                pkg"add JLD2"
                 pkg"add Dates"
                 file = scriptsdir("long_running_script.jl")
                 cp(joinpath(@__DIR__, "long_running_script.jl"), file)
                 run(`julia $file`)
                 for i in 1:4
                     folder = datadir("sims","$i")
-                    file = datadir("sims","$i","output.bson")
+                    file = datadir("sims","$i","output.jld2")
                     @test isfile(file)
-                    result = BSON.load(file)[:result]
+                    result = load(file)["result"]
                     m = Metadata(folder)
                     p = m["parameters"]
                     @test p[:a]^p[:b] == result
@@ -170,17 +170,17 @@ include("helper_functions.jl")
         dummy_project() do folder
             @testset "Rerun simulation" begin
                 Pkg.develop(PackageSpec(url=joinpath(@__DIR__,"..")))
-                pkg"add BSON"
+                pkg"add JLD2"
                 pkg"add Dates"
                 file = scriptsdir("long_re_running_script.jl")
                 cp(joinpath(@__DIR__, "long_re_running_script.jl"), file)
                 run(`julia $file`)
                 for i in 1:4
                     folder = datadir("sims","$i")
-                    fileA = datadir("sims","$i","output.bson")
-                    fileB = datadir("sims","$i","output_first_run.bson")
-                    resultA = BSON.load(fileA)[:result]
-                    resultB = BSON.load(fileB)[:result]
+                    fileA = datadir("sims","$i","output.jld2")
+                    fileB = datadir("sims","$i","output_first_run.jld2")
+                    resultA = load(fileA)["result"]
+                    resultB = load(fileB)["result"]
                     @test resultA == resultB
                 end
             end

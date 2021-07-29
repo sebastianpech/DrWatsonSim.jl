@@ -14,7 +14,7 @@ end
 
 function get_metadata(f::Function)
     ms = Metadata[]
-    for file in filter(x->endswith(x,".bson"),readdir(metadatadir()))
+    for file in filter(x->endswith(x,".jld2"),readdir(metadatadir()))
         m = load_metadata(joinpath(metadatadir(),file), ignore_exceptions=true)
         m === nothing && continue
         f(m) && push!(ms, m)

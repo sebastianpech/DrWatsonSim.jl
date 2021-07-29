@@ -1,13 +1,13 @@
 using DrWatson
 @quickactivate "dummy_project"
 using DrWatsonSim
-using BSON
+using FileIO
 using Dates
 
 function long_running_computation(p,output_path)
     sleep(p[:duration])
     result = p[:a]^p[:b]
-    BSON.bson(output_path, Dict(:result=>result))
+    save(output_path, Dict("result"=>result))
     return nothing
 end
 
@@ -30,4 +30,4 @@ if in_simulation_mode()
     println("$(simid()): Done creating new file")
 end
 
-@runsync x->long_running_computation(x, simdir("output.bson")) dict_list(parameter) datadir("sims")
+@runsync x->long_running_computation(x, simdir("output.jld2")) dict_list(parameter) datadir("sims")

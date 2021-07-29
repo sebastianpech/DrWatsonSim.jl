@@ -1,7 +1,7 @@
 module DrWatsonSim
 
 using DrWatson
-using BSON
+using FileIO
 using Reexport
 @reexport using Dates
 

@@ -54,11 +54,11 @@ get_stored_path(m::Metadata) = getfield(m,:path)
 
 standardize_path(path) = join(splitpath(project_rel_path(path)), "/")
 hash_path(path) = hash(standardize_path(path))
-to_file_name(x) = string(x)*".bson"
+to_file_name(x) = string(x)*".jld2"
 
 function load_metadata(path; ignore_exceptions=false)
     try
-        entry = BSON.load(path)
+        entry = load(path)
         Metadata([entry[string(field)] for field in fieldnames(Metadata)]...)
     catch e
         if ignore_exceptions
@@ -140,7 +140,7 @@ end
 
 function save_metadata(m::Metadata)
     setfield!(m,:mtime,mtime(m.path))
-    BSON.bson(metadatadir(to_file_name(hash_path(m.path))),Dict(string(field)=>getfield(m,field) for field in fieldnames(Metadata)))
+    save(metadatadir(to_file_name(hash_path(m.path))),Dict(string(field)=>getfield(m,field) for field in fieldnames(Metadata)))
 end
 
 function assert_metadata_directory()
