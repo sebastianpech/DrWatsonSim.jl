@@ -188,6 +188,7 @@ end
 
 function archive_simulation_folder(folder)
     files = readdir(folder, join=true)
+    length(files) == 0 && return
     archive_file = joinpath(folder, "Archive.zip")
     if isfile(archive_file)
         error("Folder '$folder' is already archived.")
