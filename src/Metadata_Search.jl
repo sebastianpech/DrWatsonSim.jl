@@ -1,9 +1,11 @@
 export get_metadata
 
 function get_metadata(search_path::String; include_parents=true)
+    search_path = abspath(search_path)
     while search_path != ""
+        search_path == projectdir() && return nothing
         id = find_file_in_index(search_path)
-        if id != nothing
+        if id !== nothing
             return Metadata(search_path)
         end
         include_parents || return nothing
