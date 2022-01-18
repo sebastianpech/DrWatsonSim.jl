@@ -185,27 +185,3 @@ macro rerunsync(t, f, path)
     source=QuoteNode(__source__)
     :(rerun_simulation($(esc(t)),$(esc(f)), $(esc(path)), $source, wait_for_finish=true))
 end
-
-function archive_simulation_folder(folder)
-    files = readdir(folder, join=true)
-    length(files) == 0 && return
-    archive_file = joinpath(folder, "Archive.zip")
-    if isfile(archive_file)
-        error("Folder '$folder' is already archived.")
-    else
-        run(`zip -rmT -qq $archive_file $files`)
-    end
-    nothing
-end
-
-function unarchive_simulation_folder(folder)
-    archive_file = joinpath(folder, "Archive.zip")
-    if isfile(archive_file)
-        run(`unzip -qq $archive_file`)
-        rm(archive_file)
-    else
-        error("Folder '$folder' is not archived.")
-    end
-    nothing
-end
-
